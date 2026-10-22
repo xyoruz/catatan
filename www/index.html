@@ -1,27 +1,118 @@
 <!DOCTYPE html>
-<html><head>
+<html lang="id"><head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6366f1">
 <title>Catatan</title>
 <style>
-body{font-family:sans-serif;margin:0;padding:16px;background:#fafafa}
-textarea{width:100%;height:90px;box-sizing:border-box;padding:8px}
-button{padding:10px 16px;margin:8px 0}
-.n{background:#fff;padding:10px;margin:8px 0;border-radius:6px;white-space:pre-wrap}
+:root{--bg:#f5f5f7;--card:#fff;--tx:#1c1c1e;--sub:#8e8e93;--pri:#6366f1;--bd:#e5e5ea;
+--c0:#ffffff;--c1:#fff3bf;--c2:#d3f9d8;--c3:#d0ebff;--c4:#ffdeeb;--c5:#e5dbff}
+@media(prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1e;--tx:#f2f2f7;--bd:#2c2c2e;
+--c0:#1c1c1e;--c1:#4a4220;--c2:#1f3d27;--c3:#1b3a52;--c4:#4d2234;--c5:#34285a}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,Roboto,'Segoe UI',sans-serif;padding-bottom:110px}
+header{position:sticky;top:0;background:var(--bg);padding:calc(20px + env(safe-area-inset-top)) 16px 10px;z-index:5}
+h1{margin:0 0 12px;font-size:30px;font-weight:800;letter-spacing:-.5px}
+#q{width:100%;padding:12px 16px;border:0;border-radius:14px;background:var(--card);color:var(--tx);font-size:16px;outline:none;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+::placeholder{color:var(--sub)}
+#list{columns:2;column-gap:12px;padding:6px 16px}
+.card{break-inside:avoid;margin-bottom:12px;padding:14px;border-radius:18px;border:1px solid var(--bd);box-shadow:0 1px 4px rgba(0,0,0,.06);position:relative}
+.card:active{transform:scale(.98)}
+.card h3{margin:0 0 6px;font-size:16px;word-break:break-word;padding-right:18px}
+.card p{margin:0 0 10px;font-size:14px;line-height:1.4;color:var(--sub);white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:7;-webkit-box-orient:vertical;overflow:hidden}
+.card small{font-size:11px;color:var(--sub)}
+.pin{position:absolute;top:10px;right:10px;font-size:13px}
+#empty{display:none;text-align:center;color:var(--sub);margin-top:90px;line-height:1.6}
+#fab{position:fixed;right:20px;bottom:calc(24px + env(safe-area-inset-bottom));width:62px;height:62px;border-radius:31px;border:0;background:var(--pri);color:#fff;font-size:34px;box-shadow:0 8px 20px rgba(99,102,241,.45)}
+#ed{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .25s ease;visibility:hidden}
+#ed.open{transform:none;visibility:visible}
+.bar{display:flex;align-items:center;gap:8px;padding:calc(12px + env(safe-area-inset-top)) 12px 8px}
+.bar button{border:0;background:rgba(128,128,128,.18);color:var(--tx);border-radius:12px;padding:10px 14px;font-size:15px}
+.sp{flex:1}
+#et{border:0;background:none;color:var(--tx);font-size:24px;font-weight:700;padding:8px 20px;outline:none;width:100%}
+#eb{flex:1;border:0;background:none;color:var(--tx);font-size:17px;line-height:1.5;padding:8px 20px;outline:none;resize:none;width:100%;font-family:inherit}
+.foot{display:flex;align-items:center;gap:10px;padding:12px 20px calc(14px + env(safe-area-inset-bottom))}
+.dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--bd);padding:0}
+.dot.on{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri)}
+#dt{margin-left:auto;font-size:12px;color:var(--sub)}
 </style></head><body>
-<h2>Catatan</h2>
-<textarea id="t" placeholder="Tulis catatan..."></textarea>
-<button onclick="add()">Simpan</button>
-<div id="l"></div>
+<header><h1>Catatan</h1><input id="q" placeholder="Cari catatan..."></header>
+<div id="list"></div>
+<div id="empty">Belum ada catatan.<br>Tekan + untuk membuat.</div>
+<button id="fab">+</button>
+<div id="ed">
+ <div class="bar"><button id="bk">← Selesai</button><span class="sp"></span><button id="bp"></button><button id="bd"></button></div>
+ <input id="et" placeholder="Judul">
+ <textarea id="eb" placeholder="Tulis catatan..."></textarea>
+ <div class="foot" id="ft"><span id="dt"></span></div>
+</div>
 <script>
-let n=[];
-try{n=JSON.parse(localStorage.getItem('n')||'[]')}catch(e){}
-function save(){localStorage.setItem('n',JSON.stringify(n));show()}
-function add(){const v=t.value.trim();if(!v)return;n.unshift(v);t.value='';save()}
-function del(i){n.splice(i,1);save()}
-function show(){l.innerHTML='';n.forEach((x,i)=>{
- const d=document.createElement('div');d.className='n';d.textContent=x;
- const b=document.createElement('button');b.textContent='Hapus';b.onclick=()=>del(i);
- d.appendChild(document.createElement('br'));d.appendChild(b);l.appendChild(d)})}
-show();
+const $=id=>document.getElementById(id);
+let notes=[],cur=null,armed=0,skip=false;
+function save(){try{localStorage.setItem('notes2',JSON.stringify(notes))}catch(e){}}
+function load(){
+ try{notes=JSON.parse(localStorage.getItem('notes2')||'null')||[]}catch(e){notes=[]}
+ try{
+  const o=JSON.parse(localStorage.getItem('n')||'[]');
+  if(Array.isArray(o)&&o.length){o.forEach((x,i)=>notes.push({id:Date.now()+i,t:'',b:String(x),c:0,p:0,u:Date.now()-i}));save()}
+  localStorage.removeItem('n')
+ }catch(e){}
+}
+function fmt(u){return new Date(u).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}
+function render(){
+ const k=$('q').value.toLowerCase();
+ const f=notes.filter(x=>(x.t+' '+x.b).toLowerCase().includes(k)).sort((a,b)=>(b.p-a.p)||(b.u-a.u));
+ const l=$('list');l.innerHTML='';
+ $('empty').style.display=f.length?'none':'block';
+ f.forEach(x=>{
+  const d=document.createElement('div');d.className='card';d.style.background='var(--c'+x.c+')';
+  if(x.p){const p=document.createElement('span');p.className='pin';p.textContent='📌';d.appendChild(p)}
+  if(x.t){const h=document.createElement('h3');h.textContent=x.t;d.appendChild(h)}
+  if(x.b){const p=document.createElement('p');p.textContent=x.b;d.appendChild(p)}
+  const s=document.createElement('small');s.textContent=fmt(x.u);d.appendChild(s);
+  d.onclick=()=>openEd(x.id);l.appendChild(d)
+ })
+}
+function paint(){
+ $('ed').style.background='var(--c'+cur.c+')';
+ document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('on',i===cur.c));
+ $('bp').textContent=cur.p?'📌 Disematkan':'📍 Sematkan';
+ $('dt').textContent=fmt(cur.u);
+ $('bd').textContent='🗑';armed=0
+}
+function openEd(id){
+ cur=id?notes.find(x=>x.id===id):{id:Date.now(),t:'',b:'',c:0,p:0,u:Date.now()};
+ $('et').value=cur.t;$('eb').value=cur.b;paint();
+ history.pushState({e:1},'');
+ $('ed').classList.add('open');
+ if(!id)setTimeout(()=>$('eb').focus(),250)
+}
+function closeEd(){
+ if(!$('ed').classList.contains('open'))return;
+ if(!skip){
+  const t=$('et').value.trim(),b=$('eb').value.trim();
+  const i=notes.findIndex(x=>x.id===cur.id);
+  if(!t&&!b){if(i>-1)notes.splice(i,1)}
+  else{if(t!==cur.t||b!==cur.b)cur.u=Date.now();cur.t=t;cur.b=b;if(i<0)notes.push(cur)}
+  save()
+ }
+ skip=false;
+ $('ed').classList.remove('open');
+ document.activeElement&&document.activeElement.blur();
+ render()
+}
+for(let i=0;i<6;i++){
+ const b=document.createElement('button');b.className='dot';b.style.background='var(--c'+i+')';
+ b.onclick=()=>{cur.c=i;paint()};$('ft').insertBefore(b,$('dt'))
+}
+$('fab').onclick=()=>openEd();
+$('bk').onclick=()=>history.back();
+$('bp').onclick=()=>{cur.p=cur.p?0:1;paint()};
+$('bd').onclick=()=>{
+ if(!armed){armed=1;$('bd').textContent='Hapus?';setTimeout(()=>{armed=0;$('bd').textContent='🗑'},2500);return}
+ notes=notes.filter(x=>x.id!==cur.id);save();skip=true;history.back()
+};
+$('q').oninput=render;
+addEventListener('popstate',closeEd);
+load();render();
 </script></body></html>
