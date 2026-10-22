@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Catatan</title>
+<style>
+body{font-family:sans-serif;margin:0;padding:16px;background:#fafafa}
+textarea{width:100%;height:90px;box-sizing:border-box;padding:8px}
+button{padding:10px 16px;margin:8px 0}
+.n{background:#fff;padding:10px;margin:8px 0;border-radius:6px;white-space:pre-wrap}
+</style></head><body>
+<h2>Catatan</h2>
+<textarea id="t" placeholder="Tulis catatan..."></textarea>
+<button onclick="add()">Simpan</button>
+<div id="l"></div>
+<script>
+let n=[];
+try{n=JSON.parse(localStorage.getItem('n')||'[]')}catch(e){}
+function save(){localStorage.setItem('n',JSON.stringify(n));show()}
+function add(){const v=t.value.trim();if(!v)return;n.unshift(v);t.value='';save()}
+function del(i){n.splice(i,1);save()}
+function show(){l.innerHTML='';n.forEach((x,i)=>{
+ const d=document.createElement('div');d.className='n';d.textContent=x;
+ const b=document.createElement('button');b.textContent='Hapus';b.onclick=()=>del(i);
+ d.appendChild(document.createElement('br'));d.appendChild(b);l.appendChild(d)})}
+show();
+</script></body></html>
